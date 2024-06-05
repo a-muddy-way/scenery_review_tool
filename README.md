@@ -1,6 +1,6 @@
-#　Kyoto Scenery Review Tool (だれもが簡易に利用できる景観検討ツール)
+# Kyoto Scenery Review Tool (だれもが簡易に利用できる景観検討ツール)
 
-##　≪目次≫
+## ≪目次≫
 1. 目的
 1. 使用ソフト
 1. 作業手順
