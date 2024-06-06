@@ -1,3 +1,6 @@
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 # 参考；https://qiita.com/bear_montblanc/items/6ea5bb7e7e72303a8a97
 import base64
 import datetime
@@ -12,7 +15,7 @@ from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
 import pandas as pd
 import params as prm
-import pickle
+# import pickle
 from pydantic import BaseModel, Field
 import re
 import subprocess
@@ -75,8 +78,8 @@ def get_groundplan_function():
             )
         ]
     )
-    with open('./output/pkl/res.pkl', 'wb') as f:
-        pickle.dump(res, f)
+    # with open('./output/pkl/res.pkl', 'wb') as f:
+    #     pickle.dump(res, f)
 
     # データを保存する
     df = pd.DataFrame({'X': [], 'Y': []})
@@ -96,8 +99,8 @@ def get_groundplan_function():
     # FixMe!!
     # ここにBlenderに底面の線分の交差や記述順序（半時計回りになっているか）のバリデーション処理を行う
     ###
-    with open('./output/pkl/df.pkl', 'wb') as f:
-        pickle.dump(df, f)
+    # with open('./output/pkl/df.pkl', 'wb') as f:
+    #     pickle.dump(df, f)
 
     lst_vertex_coordinates = []
     for row in df.itertuples():
