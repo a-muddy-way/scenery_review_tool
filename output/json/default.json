@@ -1,0 +1,30 @@
+{
+    "number_of_floors": 4,
+    "width": 15,
+    "depth": 20,
+    "base_shape": 1,
+    "base_color_ground_r": 60,
+    "base_color_ground_g": 60,
+    "base_color_ground_b": 60,
+    "base_color_wall_r": 90,
+    "base_color_wall_g": 90,
+    "base_color_wall_b": 255,
+    "vertex_coordinates": [
+        [
+            0.0,
+            0.0
+        ],
+        [
+            12.98,
+            0.0
+        ],
+        [
+            12.98,
+            7.095
+        ],
+        [
+            0.0,
+            7.095
+        ]
+    ]
+}
