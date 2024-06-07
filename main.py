@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import edge_tts
 import json
 import langchain
+# /home/adminuser/venv/lib/python3.11/site-packages/langchain_core/_api/deprecation.py:119: LangChainDeprecationWarning: The function `initialize_agent` was deprecated in LangChain 0.1.0 and will be removed in 0.3.0. Use Use new agent constructor methods like create_react_agent, create_json_agent, create_structured_chat_agent, etc. instead.
 from langchain.agents import initialize_agent, AgentType, Tool
 from langchain.callbacks import StreamlitCallbackHandler
 from langchain.prompts import MessagesPlaceholder
@@ -16,6 +17,7 @@ import pandas as pd
 import params as prm
 from PIL import Image
 import streamlit as st
+import streamlit.components.v1 as components
 # from tools import build_db_for_rag # 必要時のみ有効化する
 from tools import get_response_by_rag, get_groundplan_function
 from tools import UpdateBuildingParameterTool
@@ -30,10 +32,60 @@ langchain.debug = True
 def init_page():
     st.set_page_config(
         page_title="京都市 景観検討ツール（モックアップ版）",
-        page_icon="🤖"
+        page_icon="🤖",
+        layout="wide",
+        initial_sidebar_state="expanded",
     )
     st.header("京都市 景観検討ツール（モックアップ版）")
     # st.sidebar.title("Options")
+    HIDE_ST_STYLE = """
+        <style>
+        div[data-testid="stToolbar"] {
+            visibility: hidden;
+            height: 0%;
+            position: fixed;
+        }
+        div[data-testid="stDecoration"] {
+            visibility: hidden;
+            height: 0%;
+            position: fixed;
+        }
+        #MainMenu {
+                visibility: hidden;
+                height: 0%;
+        }
+        header {
+            visibility: hidden;
+            height: 0%;
+        }
+        footer {
+            visibility: hidden;
+            height: 0%;
+        }
+        .appview-container .main .block-container{
+            padding-top: 1rem;
+            padding-right: 3rem;
+            padding-left: 3rem;
+            padding-bottom: 1rem;
+        }  
+        .reportview-container {
+            padding-top: 0rem;
+            padding-right: 3rem;
+            padding-left: 3rem;
+            padding-bottom: 0rem;
+        }
+        header[data-testid="stHeader"] {
+                z-index: -1;
+        }
+        div[data-testid="stToolbar"] {
+            z-index: 100;
+        }
+        div[data-testid="stDecoration"] {
+            z-index: 100;
+        }
+        </style>
+    """
+    st.markdown(HIDE_ST_STYLE, unsafe_allow_html=True)
 
 def autoplay_audio(file_path: str):
     with open(file_path, "rb") as f:
@@ -185,6 +237,10 @@ def update_dataframe(df):
 
 if __name__ == "__main__":
     init_page()
+
+    # カラム分割
+    col1, col2 = st.columns(2)
+
     # チャット入力欄を作成
     prompt_text = st.chat_input()
 
@@ -226,22 +282,21 @@ if __name__ == "__main__":
         # st.sidebar.image(Image.open(prm.path_image_dir + dict_args['image_path']), width=400)
         # メッセージを表示
         st.session_state.messages.append({"role": "assistant", "content": str_out})
-        st.chat_message("user").write(str_out)
+        col1.chat_message("user").write(str_out)
         st.session_state["file_uploader_key"] += 1
         st.rerun()
 
     # オプション
     st.sidebar.markdown("## オプション")
+    st.sidebar.markdown(":red[※オンラインモックアップでは使用不可]")
     # 音声認識を実行するボタンを追加
     if st.sidebar.button('🎤 音声入力'):
         prompt_voice = recognize_speech()  # 音声認識関数を呼び出し、結果を取得
     else:
         prompt_voice = ''
-    #     # セッション状態から以前の認識テキストを取得
-    #     prompt = st.session_state.get('recognized_text', "")
     
     on_voice = st.sidebar.toggle("📢 音声出力")
-    # on_debug = st.sidebar.toggle("💻 開発者用")
+    on_debug = st.sidebar.toggle("💻 開発者用")
 
     if "messages" not in st.session_state:
         st.session_state.messages = [
@@ -269,7 +324,7 @@ if __name__ == "__main__":
         ]
         
     for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
+        col1.chat_message(msg["role"]).write(msg["content"])
 
     if prompt_text is not None or len(prompt_voice)>0: # 入力が空ではない場合 
         prompt = ''
@@ -278,21 +333,23 @@ if __name__ == "__main__":
         if len(prompt_voice):
             prompt += prompt_voice
         st.session_state.messages.append({"role": "user", "content": prompt})
-        st.chat_message("user").write(prompt)
+        col1.chat_message("user").write(prompt)
 
         memory = get_memory()
         agent = get_agent(memory=memory)
 
-        with st.chat_message("assistant"):
+        with col1.chat_message("assistant"):
             st_cb = StreamlitCallbackHandler(st.empty())
-            response = agent.run(prompt, callbacks=[st_cb])
+            response = agent.invoke(prompt, callbacks=[st_cb])
             # response = st.session_state.agent.run(prompt, callbacks=[st_cb])
 
             # save agent memory to session state
             st.session_state.memory = agent.memory
-            st.session_state.messages.append({"role": "assistant", "content": response})
-            st.write(response)
-            
+            st.session_state.messages.append({"role": "assistant", "content": response['output']})
+            if on_debug:
+                st.write(response)
+            st.write(response['output'])
+
             # 音声を出力する
             if on_voice:
                 # 音声合成の設定を行い、ファイルに保存
@@ -301,7 +358,7 @@ if __name__ == "__main__":
                 # 生成された音声をウェブアプリ上で再生
                 # st.audio(prm.path_audio)
                 autoplay_audio(prm.path_audio)
-        
+
         st.rerun()
         # placeholder.dataframe(
         #     update_dataframe(pd.DataFrame({'df_key': [], 'df_synonym': [], 'df_value': []})),
@@ -309,4 +366,182 @@ if __name__ == "__main__":
         #     hide_index=True,
         #     )
 
+    col2.markdown('開発中　ー　ここに建築物の3Dモデルを表示する')
+    with col2:
+        html_string = '''
+        <style>
+            *
+            {
+                margin: 0;
+                padding: 0;
+            }
 
+            html,
+            body
+            {
+                overflow: hidden;
+                min-height: 700px;
+            }
+
+            .webgl
+            {
+                position: fixed;
+                top: 0;
+                left: 0;
+                outline: none;
+            }
+        </style>
+
+        <script src="//cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+        <!--<script src="//cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.js"></script> -->
+        <!-- <script src="http://threejs.org/examples/js/controls/TrackballControls.js"></script> -->
+
+
+        <script type="module">
+            // import * as THREE from 'https://cdn.skypack.dev/three@0.128.0/build/three.module.js';
+            // import { OrbitControls } from 'https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js'
+            // import { OBJLoader } from 'https://unpkg.com/three@0.147.0/examples/js/loaders/OBJLoader.js'
+            // import { MTLLoader } from 'https://unpkg.com/three@0.147.0/examples/js/loaders/MTLLoader.js' 
+            // import { fflate } from 'https://unpkg.com/three@0.147.0/examples/js/libs/fflate.min.js'
+            // import * as THREE        from 'https://unpkg.com/three@0.147.0/build/three.module.js';
+            
+            import * as THREE        from 'https://cdn.skypack.dev/three@0.128.0/build/three.module.js';
+            import { OrbitControls } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/controls/OrbitControls.js';
+            import { OBJLoader }     from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/OBJLoader.js';
+            import { MTLLoader }     from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/MTLLoader.js'; 
+            // import { fflate }        from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/libs/fflate.min.js';
+            
+
+
+            // Base
+            // ----------
+            
+            // Initialize scene
+            const scene = new THREE.Scene()
+            
+            // Initialize camera
+            const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 60)
+            
+            // Reposition camera
+            camera.position.set(6, 0, 0)
+            
+            // Initialize renderer
+            const renderer = new THREE.WebGLRenderer({
+            alpha: true,
+            antialias: true
+            })
+            
+            // Set renderer size
+            renderer.setSize(window.innerWidth, window.innerHeight)
+            
+            // Append renderer to body
+            document.body.appendChild(renderer.domElement)
+            
+            // Initialize controls
+            const controls = new OrbitControls(camera, renderer.domElement)
+            
+            // World
+            // ----------
+            
+            // Load world texture
+            const worldTexture = new THREE.TextureLoader().load("https://assets.codepen.io/141041/small-world.jpg")
+            
+            // Initialize world geometry
+            const worldGeometry = new THREE.SphereGeometry(1, 40, 40)
+            
+            // Initialize world material
+            const worldMaterial = new THREE.MeshLambertMaterial({
+            map: worldTexture
+            })
+            
+            // Initialize world
+            const world = new THREE.Mesh(worldGeometry, worldMaterial)
+            
+            // Add earth to scene
+            scene.add(world)
+            
+            // Clouds
+            // ----------
+            
+            // Load clouds texture
+            const cloudTexture = new THREE.TextureLoader().load("https://assets.codepen.io/141041/small-world-clouds.png")
+            
+            // Initialize clouds geometry
+            const cloudGeometry = new THREE.SphereGeometry(1.01, 40, 40)
+            
+            // Initialize clouds material
+            const cloudMaterial = new THREE.MeshBasicMaterial({
+            map: cloudTexture,
+            transparent: true
+            })
+            
+            // Initialize clouds
+            const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial)
+            
+            // Add clouds to scene
+            scene.add(clouds)
+
+            // add subtle ambient lighting
+            const ambientLight = new THREE.AmbientLight(0xbbbbbb);
+            scene.add(ambientLight);
+
+            // directional lighting
+            const directionalLight = new THREE.DirectionalLight(0xffffff);
+            directionalLight.position.set(1, 1, 1).normalize();
+            scene.add(directionalLight);
+            
+            // Animation
+            // ----------      
+            
+            // Prepare animation loop
+            function animate() {
+            // Request animation frame
+            requestAnimationFrame(animate)
+            
+            // Rotate world
+            world.rotation.y += 0.0005
+            
+            // Rotate clouds
+            clouds.rotation.y -= 0.001
+            
+            // Render scene
+            renderer.render(scene, camera)
+
+            }
+            
+            // Animate
+            animate()
+            
+            // Resize
+            // ----------
+            
+            // Listen for window resizing
+            window.addEventListener('resize', () => {
+            // Update camera aspect
+            camera.aspect = window.innerWidth / window.innerHeight
+            
+            // Update camera projection matrix
+            camera.updateProjectionMatrix()
+            
+            // Resize renderer
+            renderer.setSize(window.innerWidth, window.innerHeight)
+
+            });
+        </script>
+
+        <style>
+        body{
+            background: radial-gradient(circle at center, white, rgba(113,129,191,0.5) 50%);
+        }
+        </style>
+        '''
+
+        # components.html(html_string)
+        # with open("index.html", "r",encoding="utf-8") as html_file:
+        #     html_code = html_file.read()
+        # html_code = '<body> helloworld </body> '
+        # with open("index.js", "r",encoding="utf-8") as js_file:
+        #     js_code = js_file.read()
+        components.html(html_string, height=640)
+        # col2.markdown(html_code, unsafe_allow_html=True) 
+        # col2.markdown(html_string, unsafe_allow_html=True) 

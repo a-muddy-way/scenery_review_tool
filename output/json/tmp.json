@@ -6,6 +6,9 @@
     "base_color_ground_r": 60,
     "base_color_ground_g": 60,
     "base_color_ground_b": 60,
+    "base_color_wall_r": 139,
+    "base_color_wall_g": 69,
+    "base_color_wall_b": 19,
     "vertex_coordinates": [
         [
             0.0,
@@ -23,8 +26,5 @@
             0.0,
             7.095
         ]
-    ],
-    "base_color_wall_r": 255,
-    "base_color_wall_g": 255,
-    "base_color_wall_b": 0
+    ]
 }

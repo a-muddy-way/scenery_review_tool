@@ -86,7 +86,7 @@ function init() {
     tick();
 
     function tick() {
-        renderer.render(scene, camera); // レンダリング
+        renderer.render(scene, camera); // rendering
         requestAnimationFrame(tick);
     }
 }

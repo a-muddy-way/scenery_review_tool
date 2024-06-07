@@ -1,6 +1,9 @@
+## for StreamlitCloud: Start
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+## for StreamlitCloud: End
+
 # 参考；https://qiita.com/bear_montblanc/items/6ea5bb7e7e72303a8a97
 import base64
 import datetime

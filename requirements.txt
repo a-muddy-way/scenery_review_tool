@@ -13,5 +13,6 @@ python-dotenv
 SpeechRecognition
 streamlit
 tiktoken
-## 以下はStreamlitCloudのみ
-pysqlite3-binary
+## for StreamlitCloud: Start
+# pysqlite3-binary
+## for StreamlitCloud: End
