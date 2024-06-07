@@ -14,5 +14,5 @@ SpeechRecognition
 streamlit
 tiktoken
 ## for StreamlitCloud: Start
-# pysqlite3-binary
+pysqlite3-binary
 ## for StreamlitCloud: End
