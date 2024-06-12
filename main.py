@@ -31,12 +31,12 @@ langchain.debug = True
 
 def init_page():
     st.set_page_config(
-        page_title="京都市 景観検討ツール（モックアップ版）",
+        page_title="XXX 景観検討ツール（モックアップ版）",
         page_icon="🤖",
         layout="wide",
         initial_sidebar_state="expanded",
     )
-    st.header("京都市 景観検討ツール（モックアップ版）")
+    st.header("XXX 景観検討ツール（モックアップ版）")
     # st.sidebar.title("Options")
     HIDE_ST_STYLE = """
         <style>
@@ -117,8 +117,8 @@ def get_agent(memory=None):
                 あなたは、ユーザの入力に応じて建物のパラメータを整理します。 \
                 内容が不明な項目がある場合は、ユーザーに問い合わせてください。 \
                 なお、あなたは以下の機能を使用できます。 ' \
-                # + '・`build_db_for_rag`： 京都市の建物に関する法規をDBに登録し、検索しできるようにします。 ' \
-                + '・`get_response_by_rag`： 京都市の建物に関する法規を検索し、建築のアドバイスを行います。 ' \
+                # + '・`build_db_for_rag`： XXXの建物に関する法規をDBに登録し、検索しできるようにします。 ' \
+                + '・`get_response_by_rag`： XXXの建物に関する法規を検索し、建築のアドバイスを行います。 ' \
                 # + '・`get_groundplan_function`： 平面図を読み込んで建物の平面の形状を取得します。 ' \
                 + '・`update_building_parameters`： ユーザが入力したパラメータを保存します。 ' \
                 + '・`remove_building_parameters`： ユーザが入力したパラメータを除去します。 ' \
@@ -136,12 +136,12 @@ def get_agent(memory=None):
                 # Tool(
                 #     name = 'build_db_for_rag',
                 #     func = build_db_for_rag,
-                #     description = '京都市の建物に関する法規をDBに登録し、検索しできるようにします。',
+                #     description = 'XXXの建物に関する法規をDBに登録し、検索しできるようにします。',
                 # ),
                 Tool(
                     name = 'get_response_by_rag',
                     func = get_response_by_rag,
-                    description = 'ユーザからの問いに応じて京都市の建物に関する法規を検索し、建築のアドバイスを行います。',
+                    description = 'ユーザからの問いに応じてXXXの建物に関する法規を検索し、建築のアドバイスを行います。',
                 ),
                 # Tool(
                 #     name = 'get_groundplan_function',
@@ -304,7 +304,7 @@ if __name__ == "__main__":
                 + '私はあなたが建物のデザインを行うために、次の機能を提供します。  \n  \n ' \
 
                 + '  \n **:orange[＜設計の前提に関わる機能＞]**  \n ' \
-                + ':orange[ ― 京都市の建物に関する法規を検索し、アドバイスを行います。]  \n ' \
+                + ':orange[ ― XXXの建物に関する法規を検索し、アドバイスを行います。]  \n ' \
 
                 + '  \n **:orange[＜デザインの作成/変更に関わる機能＞]**  \n ' \
                 + ':orange[ ― デザインのひな型を取得します。  \n ' \
