@@ -1,4 +1,3 @@
-bpy==3.4.0
 chromadb
 edge_tts
 jupyter
@@ -13,7 +12,8 @@ SpeechRecognition
 streamlit
 tiktoken
 ## for Local: Start
-PyAudio
+# bpy==3.4.0
+# PyAudio
 ## for Local: End
 ## for StreamlitCloud: Start
 pysqlite3-binary
