@@ -13,9 +13,12 @@ from langchain.memory import ConversationBufferMemory
 from langchain.schema import SystemMessage
 from langchain_openai import ChatOpenAI
 from langchain_community.output_parsers.rail_parser import GuardrailsOutputParser
+import os
 import pandas as pd
 import params as prm
 from PIL import Image
+import pathlib 
+import shutil
 import streamlit as st
 import streamlit.components.v1 as components
 # from tools import build_db_for_rag # 必要時のみ有効化する
@@ -37,7 +40,6 @@ def init_page():
         initial_sidebar_state="expanded",
     )
     st.header("京都市 景観検討ツール（モックアップ版）")
-    # st.sidebar.title("Options")
     HIDE_ST_STYLE = """
         <style>
         div[data-testid="stToolbar"] {
@@ -86,6 +88,20 @@ def init_page():
         </style>
     """
     st.markdown(HIDE_ST_STYLE, unsafe_allow_html=True)
+
+    # HACK This works when we've installed streamlit with pip/pipenv, so the
+    # permissions during install are the same as the running process
+    streamlit_static_path = pathlib.Path(st.__path__[0]) / 'static'
+    static_files_path = (streamlit_static_path / 'static_files')
+    if not static_files_path.is_dir():
+        static_files_path.mkdir()
+    # PythonのカレントディレクトリからStreamlitの実行環境にファイルをコピーする
+    shutil.copytree('static_files', static_files_path, dirs_exist_ok=True)
+    # FIXME!! 個別にコピーしたほうが軽いかも
+    # wildlife_video = static_files_path / "Wildlife.mp4"
+    # for f in os.listdir('static_files')
+    #     if not wildlife_video.exists():
+    #       　shutil.copy("Wildlife.mp4", wildlife_video)  # For newer Python.
 
 def autoplay_audio(file_path: str):
     with open(file_path, "rb") as f:
@@ -298,6 +314,8 @@ if __name__ == "__main__":
     on_voice = st.sidebar.toggle("📢 音声出力")
     on_debug = st.sidebar.toggle("💻 開発者用")
 
+    col1.markdown("#### 3Dモデル作成")
+
     if "messages" not in st.session_state:
         st.session_state.messages = [
             {"role": "assistant", "content": 'こんにちは！私は建物生成メーカーです。  \n ' \
@@ -366,182 +384,383 @@ if __name__ == "__main__":
         #     hide_index=True,
         #     )
 
-    col2.markdown('開発中　ー　ここに建築物の3Dモデルを表示する')
+    col2.markdown("#### 建造物イメージ")
     with col2:
         html_string = '''
-        <style>
-            *
-            {
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <script type="importmap">
+                {
+                    "imports": {
+                    "three": "https://unpkg.com/three@0.165.0/build/three.module.js"
+                    }
+                }
+            </script>
+            <style>
+                *
+                {
                 margin: 0;
                 padding: 0;
-            }
-
-            html,
-            body
-            {
+                }
+                html,
+                body
+                {
                 overflow: hidden;
                 min-height: 700px;
-            }
-
-            .webgl
-            {
+                }
+                .webgl
+                {
                 position: fixed;
                 top: 0;
                 left: 0;
                 outline: none;
+                }
+            </style>
+            <script type="module">
+                import * as THREE from "three";
+                import { OrbitControls } from "https://unpkg.com/three@0.165.0/examples/jsm/controls/OrbitControls.js";
+                import { OBJLoader }     from "https://unpkg.com/three@0.165.0/examples/jsm/loaders/OBJLoader.js";
+                import { MTLLoader }     from "https://unpkg.com/three@0.165.0/examples/jsm/loaders/MTLLoader.js";
+
+                // Base
+                // ----------
+                
+                // Initialize scene
+                const scene = new THREE.Scene()
+                
+                // Initialize camera
+                // new THREE.PerspectiveCamera(視野角, アスペクト比, near, far)
+                const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 200)
+                
+                // Reposition camera
+                var obj_size = new THREE.Vector3();
+                camera.position.set(30, 20, -30);
+                // camera.lookAt(new THREE.Vector3(0, 100, 0));
+                
+                // Initialize renderer
+                const renderer = new THREE.WebGLRenderer({
+                alpha: true,
+                antialias: true
+                })
+                
+                // Set renderer size
+                renderer.setSize(window.innerWidth, window.innerHeight)
+                
+                // Append renderer to body
+                document.body.appendChild(renderer.domElement)
+                
+                // // Initialize controls
+                const controls = new OrbitControls(camera, renderer.domElement)
+
+                // Building
+                // add helpers
+                let gridHelper = new THREE.GridHelper(100, 10, 0xff0000, 0x00ff00);
+                scene.add(gridHelper);
+                const axesHelper = new THREE.AxesHelper( 100 );
+                scene.add( axesHelper);
+
+                var obj_group = new THREE.Group();
+                scene.add(obj_group); // グループをシーンに追加
+
+                var obj_bldg;
+                var mtlLoader = new MTLLoader();
+                mtlLoader.load("static_files/building_base.mtl", function(materials)
+                {
+                    materials.preload();
+                    var objLoader = new OBJLoader();
+                    objLoader.setMaterials(materials);
+                    objLoader.load("static_files/building_base.obj", function(object)
+                    {    
+                        obj_bldg = object;
+
+                        // オブジェクトのサイズを取得する
+                        const box  = new THREE.Box3().setFromObject(object);
+                        obj_size = box.getSize(new THREE.Vector3());
+
+                        obj_bldg.position.set(-1*obj_size.x/2 , 0, obj_size.z/2);
+                        // scene.add( obj_bldg );
+                        obj_group.add(obj_bldg); // グループにオブジェクトを追加
+                        camera.lookAt(new THREE.Vector3(0, obj_size.y/2, 0));
+                    });
+                });
+
+                // 画像テクスチャの読み込み
+                const textureLoader = new THREE.TextureLoader();
+                const texture = textureLoader.load('static_files/ground.png');
+
+                // 平面ジオメトリの作成
+                // const geometry = new THREE.PlaneGeometry(100, 100);
+                // const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+                // const plane = new THREE.Mesh(geometry, material);
+                // plane.rotation.x = Math.PI / 2;
+                // scene.add(plane);
+
+                // add subtle ambient lighting
+                const ambientLight = new THREE.AmbientLight(0xbbbbbb);
+                scene.add(ambientLight);
+
+                // directional lighting
+                const directionalLight = new THREE.DirectionalLight(0xffffff);
+                directionalLight.position.set(1, 1, 1).normalize();
+                scene.add(directionalLight);
+                
+                // Animation
+                // ----------      
+                
+                // Prepare animation loop
+                function animate() {
+                // Request animation frame
+                requestAnimationFrame(animate)
+                
+                // Rotate world
+                obj_group.rotation.y += 0.002
+
+                // Render scene
+                renderer.render(scene, camera)
+
+                }
+                
+                // Animate
+                animate()
+                
+                // Resize
+                // ----------
+                
+                // Listen for window resizing
+                window.addEventListener('resize', () => {
+                // Update camera aspect
+                camera.aspect = window.innerWidth / window.innerHeight
+                
+                // Update camera projection matrix
+                camera.updateProjectionMatrix()
+                
+                // Resize renderer
+                renderer.setSize(window.innerWidth, window.innerHeight)
+
+                });
+            </script>
+
+            <style>
+            body{
+                background: radial-gradient(circle at center, white, rgba(128, 220, 248, 0.5) 70%);
             }
-        </style>
-
-        <script src="//cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
-        <!--<script src="//cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.js"></script> -->
-        <!-- <script src="http://threejs.org/examples/js/controls/TrackballControls.js"></script> -->
-
-
-        <script type="module">
-            // import * as THREE from 'https://cdn.skypack.dev/three@0.128.0/build/three.module.js';
-            // import { OrbitControls } from 'https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js'
-            // import { OBJLoader } from 'https://unpkg.com/three@0.147.0/examples/js/loaders/OBJLoader.js'
-            // import { MTLLoader } from 'https://unpkg.com/three@0.147.0/examples/js/loaders/MTLLoader.js' 
-            // import { fflate } from 'https://unpkg.com/three@0.147.0/examples/js/libs/fflate.min.js'
-            // import * as THREE        from 'https://unpkg.com/three@0.147.0/build/three.module.js';
-            
-            import * as THREE        from 'https://cdn.skypack.dev/three@0.128.0/build/three.module.js';
-            import { OrbitControls } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/controls/OrbitControls.js';
-            import { OBJLoader }     from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/OBJLoader.js';
-            import { MTLLoader }     from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/MTLLoader.js'; 
-            // import { fflate }        from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/libs/fflate.min.js';
-            
-
-
-            // Base
-            // ----------
-            
-            // Initialize scene
-            const scene = new THREE.Scene()
-            
-            // Initialize camera
-            const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 60)
-            
-            // Reposition camera
-            camera.position.set(6, 0, 0)
-            
-            // Initialize renderer
-            const renderer = new THREE.WebGLRenderer({
-            alpha: true,
-            antialias: true
-            })
-            
-            // Set renderer size
-            renderer.setSize(window.innerWidth, window.innerHeight)
-            
-            // Append renderer to body
-            document.body.appendChild(renderer.domElement)
-            
-            // Initialize controls
-            const controls = new OrbitControls(camera, renderer.domElement)
-            
-            // World
-            // ----------
-            
-            // Load world texture
-            const worldTexture = new THREE.TextureLoader().load("https://assets.codepen.io/141041/small-world.jpg")
-            
-            // Initialize world geometry
-            const worldGeometry = new THREE.SphereGeometry(1, 40, 40)
-            
-            // Initialize world material
-            const worldMaterial = new THREE.MeshLambertMaterial({
-            map: worldTexture
-            })
-            
-            // Initialize world
-            const world = new THREE.Mesh(worldGeometry, worldMaterial)
-            
-            // Add earth to scene
-            scene.add(world)
-            
-            // Clouds
-            // ----------
-            
-            // Load clouds texture
-            const cloudTexture = new THREE.TextureLoader().load("https://assets.codepen.io/141041/small-world-clouds.png")
-            
-            // Initialize clouds geometry
-            const cloudGeometry = new THREE.SphereGeometry(1.01, 40, 40)
-            
-            // Initialize clouds material
-            const cloudMaterial = new THREE.MeshBasicMaterial({
-            map: cloudTexture,
-            transparent: true
-            })
-            
-            // Initialize clouds
-            const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial)
-            
-            // Add clouds to scene
-            scene.add(clouds)
-
-            // add subtle ambient lighting
-            const ambientLight = new THREE.AmbientLight(0xbbbbbb);
-            scene.add(ambientLight);
-
-            // directional lighting
-            const directionalLight = new THREE.DirectionalLight(0xffffff);
-            directionalLight.position.set(1, 1, 1).normalize();
-            scene.add(directionalLight);
-            
-            // Animation
-            // ----------      
-            
-            // Prepare animation loop
-            function animate() {
-            // Request animation frame
-            requestAnimationFrame(animate)
-            
-            // Rotate world
-            world.rotation.y += 0.0005
-            
-            // Rotate clouds
-            clouds.rotation.y -= 0.001
-            
-            // Render scene
-            renderer.render(scene, camera)
-
-            }
-            
-            // Animate
-            animate()
-            
-            // Resize
-            // ----------
-            
-            // Listen for window resizing
-            window.addEventListener('resize', () => {
-            // Update camera aspect
-            camera.aspect = window.innerWidth / window.innerHeight
-            
-            // Update camera projection matrix
-            camera.updateProjectionMatrix()
-            
-            // Resize renderer
-            renderer.setSize(window.innerWidth, window.innerHeight)
-
-            });
-        </script>
-
-        <style>
-        body{
-            background: radial-gradient(circle at center, white, rgba(113,129,191,0.5) 50%);
-        }
-        </style>
+            </style>
         '''
+        components.html(html_string, height=320)
 
-        # components.html(html_string)
-        # with open("index.html", "r",encoding="utf-8") as html_file:
-        #     html_code = html_file.read()
-        # html_code = '<body> helloworld </body> '
-        # with open("index.js", "r",encoding="utf-8") as js_file:
-        #     js_code = js_file.read()
-        components.html(html_string, height=640)
-        # col2.markdown(html_code, unsafe_allow_html=True) 
-        # col2.markdown(html_string, unsafe_allow_html=True) 
+    col2.markdown("")
+    col2.markdown("#### 市街地表示")
+    with col2:
+        html_string = '''
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <script type="importmap">
+                {
+                    "imports": {
+                    "three": "https://unpkg.com/three@0.165.0/build/three.module.js"
+                    }
+                }
+            </script>
+            <style>
+                *
+                {
+                margin: 0;
+                padding: 0;
+                }
+                html,
+                body
+                {
+                overflow: hidden;
+                min-height: 700px;
+                }
+                .webgl
+                {
+                position: fixed;
+                top: 0;
+                left: 0;
+                outline: none;
+                }
+            </style>
+            <script type="module">
+                import * as THREE from "three";
+                import { OrbitControls } from "https://unpkg.com/three@0.165.0/examples/jsm/controls/OrbitControls.js";
+                import { OBJLoader }     from "https://unpkg.com/three@0.165.0/examples/jsm/loaders/OBJLoader.js";
+                import { MTLLoader }     from "https://unpkg.com/three@0.165.0/examples/jsm/loaders/MTLLoader.js";
+
+                // Base
+                // ----------
+                
+                // Initialize scene
+                const scene = new THREE.Scene()
+                
+                // Initialize camera
+                // new THREE.PerspectiveCamera(視野角, アスペクト比, near, far)
+                const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 800)
+                
+                // Reposition camera
+                var obj_size = new THREE.Vector3();
+                camera.position.set(300, 150, -300);
+                camera.lookAt(0, 0, 0);
+                
+                // Initialize renderer
+                const renderer = new THREE.WebGLRenderer({
+                alpha: true,
+                antialias: true
+                })
+                
+                // Set renderer size
+                renderer.setSize(window.innerWidth, window.innerHeight)
+                
+                // Append renderer to body
+                document.body.appendChild(renderer.domElement)
+                
+                // // Initialize controls
+                const controls = new OrbitControls(camera, renderer.domElement)
+
+                // Building
+                // add helpers
+                // let gridHelper = new THREE.GridHelper(100, 10, 0xff0000, 0x00ff00);
+                // scene.add(gridHelper);
+                // const axesHelper = new THREE.AxesHelper( 100 );
+                // scene.add( axesHelper);
+
+                var obj_group = new THREE.Group();
+                scene.add(obj_group); // グループをシーンに追加
+
+                var obj_bldg;
+                // 3Dモデルの読み込み
+                var mtlLoader = new MTLLoader();
+                mtlLoader.load("static_files/52354611_bldg_6697_op_LOD2.mtl", function(materials)
+                {
+                    materials.preload();
+                    var objLoader = new OBJLoader();
+                    objLoader.setMaterials(materials);
+                    objLoader.load("static_files/52354611_bldg_6697_op_LOD2.obj", function(object)
+                    {    
+                        var obj_bldg = object;
+                        // オブジェクトのサイズを取得する
+                        var box  = new THREE.Box3().setFromObject(object);
+                        var obj_size = box.getSize(new THREE.Vector3());
+                        obj_bldg.position.set(0, -40 , 0);
+                        // obj_bldg.position.set(-1*obj_size.x/2 , 0, obj_size.z/2);
+                        obj_group.add(obj_bldg); // グループにオブジェクトを追加
+                        camera.lookAt(new THREE.Vector3(0, obj_size.y/2, 0));
+                    });
+                });
+                // var mtlLoader = new MTLLoader();
+                mtlLoader.load("static_files/52354611_tran_6697_op_LOD1.mtl", function(materials)
+                {
+                    materials.preload();
+                    var objLoader = new OBJLoader();
+                    objLoader.setMaterials(materials);
+                    objLoader.load("static_files/52354611_tran_6697_op_LOD1.obj", function(object)
+                    {    
+                        var obj_tran = object;
+                        // オブジェクトのサイズを取得する
+                        var box  = new THREE.Box3().setFromObject(object);
+                        var obj_size = box.getSize(new THREE.Vector3());
+                        // obj_tran.position.set(-1*obj_size.x/2 , 0, obj_size.z/2);
+                        obj_group.add(obj_tran); // グループにオブジェクトを追加
+                        camera.lookAt(new THREE.Vector3(0, obj_size.y/2, 0));
+                    });
+                });
+                // 3Dモデルの読み込み
+                var mtlLoader = new MTLLoader();
+                var obj_size = new THREE.Vector3();
+                mtlLoader.load("static_files/building_base.mtl", function(materials)
+                {
+                    materials.preload();
+                    var objLoader = new OBJLoader();
+                    objLoader.setMaterials(materials);
+                    objLoader.load("static_files/building_base.obj", function(object)
+                    {    
+                        var obj_base = object;
+                        // オブジェクトのサイズを取得する
+                        var box  = new THREE.Box3().setFromObject(object);
+                        obj_size = box.getSize(new THREE.Vector3());
+                        // obj_base.position.set(-100, 0, 50);
+                        obj_base.position.set(-80, 0, -15);
+                        // obj_base.position.set(-1*obj_size.x/2 , 0, obj_size.z/2);
+                        obj_group.add(obj_base); // グループにオブジェクトを追加
+                        camera.lookAt(new THREE.Vector3(0, obj_size.y/2, 0));
+
+                        // ピンを立てる
+                        const vertexList = [-80+obj_size.x/2, 0, -15-obj_size.z/2,   -80+obj_size.x/2, 100, -15-obj_size.z/2];
+                        // TubeGeometryの線
+                        const tubularSegments = 2;
+                        // 線の太さ
+                        const radius = 0.3;
+                        const radialSegments = 10;
+                        const points = [];
+                        for (let i = 0; i < vertexList.length; i += 3) {
+                        points.push(new THREE.Vector3(vertexList[i], vertexList[i + 1], vertexList[i + 2]));
+                        }
+                        const path = new THREE.CatmullRomCurve3(points, true);
+                        const mesh = new THREE.Mesh(new THREE.TubeGeometry(path, tubularSegments, radius, radialSegments), new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide }));
+                        obj_group.add(mesh);
+                    });
+                });
+
+
+                // 画像テクスチャの読み込み
+                const textureLoader = new THREE.TextureLoader();
+                const texture = textureLoader.load('static_files/ground.png');
+
+                // 平面ジオメトリの作成
+                const geometry = new THREE.PlaneGeometry(700, 700);
+                const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+                const plane = new THREE.Mesh(geometry, material);
+                plane.position.set(0, -0.1, 0)
+                plane.rotation.x = Math.PI / 2;
+                obj_group.add(plane);
+
+                // add subtle ambient lighting
+                const ambientLight = new THREE.AmbientLight(0xbbbbbb);
+                scene.add(ambientLight);
+
+                // directional lighting
+                const directionalLight = new THREE.DirectionalLight(0xffffff);
+                directionalLight.position.set(1, 1, 1).normalize();
+                scene.add(directionalLight);
+                
+                // Animation
+                // ----------      
+                
+                // Prepare animation loop
+                function animate() {
+                // Request animation frame
+                requestAnimationFrame(animate)
+                
+                // Rotate world
+                obj_group.rotation.y += 0.002
+
+                // Render scene
+                renderer.render(scene, camera)
+
+                }
+                
+                // Animate
+                animate()
+                
+                // Resize
+                // ----------
+                
+                // Listen for window resizing
+                window.addEventListener('resize', () => {
+                // Update camera aspect
+                camera.aspect = window.innerWidth / window.innerHeight
+                
+                // Update camera projection matrix
+                camera.updateProjectionMatrix()
+                
+                // Resize renderer
+                renderer.setSize(window.innerWidth, window.innerHeight)
+
+                });
+            </script>
+
+            <style>
+            body{
+                background: radial-gradient(circle at center, white, rgba(128, 220, 248, 0.5) 70%);
+            }
+            </style>
+        '''
+        components.html(html_string, height=320)

@@ -4,6 +4,7 @@ import json
 import logging 
 import os
 import sys
+from pathlib import Path
 
 class CustomException(Exception):
     def __init__(self, arg=""):
@@ -126,7 +127,7 @@ def main():
     ## パラメータ定義
     # リテラルを宣言する
     input_filepath_buildfy = os.path.join(os.path.dirname(__file__), './input/buildify_1.0.blend')
-    output_filepath_obj = os.path.join(os.path.dirname(__file__), './output/building_base.obj')
+    output_filepath_obj = os.path.join(os.path.dirname(__file__), './static_files/building_base.obj')
     inner_path = 'Object'
     src_object_name = 'building_base'
     dst_object_name = 'Plane'
@@ -167,8 +168,8 @@ def main():
             verts += [bm.verts.new([v[0] / max(lst_x) * building_parameters['depth'], \
                                         v[1] / max(lst_y) * building_parameters['width'], \
                                         0.0])]
-            bm.faces.new(verts)
-            bm.to_mesh(my_mesh)
+        bm.faces.new(verts)
+        bm.to_mesh(my_mesh)
     else:
         verts = [bm.verts.new([0.0, 0.0, 0.0]), \
                 bm.verts.new([building_parameters['depth'], 0.0, 0.0]), \
@@ -269,9 +270,15 @@ def main():
 logging.basicConfig(filename='./log/logger_mybuildify.log', level=logging.DEBUG)
 
 # ロガーとファイルハンドラの作成
+# ファイルが存在しなかったら作成する
+output_filepath_log = './log/logger_mybuildify.log'
+file_path_obj = Path(output_filepath_log)
+if not file_path_obj.exists():
+    file_path_obj.touch()
+
 lgr = logging.getLogger('mylogger', )
 lgr.setLevel(logging.DEBUG)
-fhr = logging.FileHandler('./log/logger_mybuildify.log', mode='a', encoding='utf-8')
+fhr = logging.FileHandler(output_filepath_log, mode='a', encoding='utf-8')
 fhr.setLevel(logging.DEBUG)
 fhr.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s :%(message)s'))
 lgr.addHandler(fhr)
