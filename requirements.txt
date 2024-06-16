@@ -16,5 +16,5 @@ tiktoken
 PyAudio
 ## for Local: End
 ## for StreamlitCloud: Start
-# pysqlite3-binary
+pysqlite3-binary
 ## for StreamlitCloud: End
