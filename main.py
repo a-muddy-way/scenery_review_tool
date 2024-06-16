@@ -39,55 +39,55 @@ def init_page():
         layout="wide",
         initial_sidebar_state="expanded",
     )
-    st.header("XXX 景観検討ツール（モックアップ版）")
-    HIDE_ST_STYLE = """
-        <style>
-        div[data-testid="stToolbar"] {
-            visibility: hidden;
-            height: 0%;
-            position: fixed;
-        }
-        div[data-testid="stDecoration"] {
-            visibility: hidden;
-            height: 0%;
-            position: fixed;
-        }
-        #MainMenu {
-                visibility: hidden;
-                height: 0%;
-        }
-        header {
-            visibility: hidden;
-            height: 0%;
-        }
-        footer {
-            visibility: hidden;
-            height: 0%;
-        }
-        .appview-container .main .block-container{
-            padding-top: 1rem;
-            padding-right: 3rem;
-            padding-left: 3rem;
-            padding-bottom: 1rem;
-        }  
-        .reportview-container {
-            padding-top: 0rem;
-            padding-right: 3rem;
-            padding-left: 3rem;
-            padding-bottom: 0rem;
-        }
-        header[data-testid="stHeader"] {
-                z-index: -1;
-        }
-        div[data-testid="stToolbar"] {
-            z-index: 100;
-        }
-        div[data-testid="stDecoration"] {
-            z-index: 100;
-        }
-        </style>
-    """
-    st.markdown(HIDE_ST_STYLE, unsafe_allow_html=True)
+    st.header("XXX 景観検討ツール（モックアップ）")
+    # HIDE_ST_STYLE = """
+    #     <style>
+    #     div[data-testid="stToolbar"] {
+    #         visibility: hidden;
+    #         height: 0%;
+    #         position: fixed;
+    #     }
+    #     div[data-testid="stDecoration"] {
+    #         visibility: hidden;
+    #         height: 0%;
+    #         position: fixed;
+    #     }
+    #     #MainMenu {
+    #             visibility: hidden;
+    #             height: 0%;
+    #     }
+    #     header {
+    #         visibility: hidden;
+    #         height: 0%;
+    #     }
+    #     footer {
+    #         visibility: hidden;
+    #         height: 0%;
+    #     }
+    #     .appview-container .main .block-container{
+    #         padding-top: 1rem;
+    #         padding-right: 3rem;
+    #         padding-left: 3rem;
+    #         padding-bottom: 1rem;
+    #     }  
+    #     .reportview-container {
+    #         padding-top: 0rem;
+    #         padding-right: 3rem;
+    #         padding-left: 3rem;
+    #         padding-bottom: 0rem;
+    #     }
+    #     header[data-testid="stHeader"] {
+    #             z-index: -1;
+    #     }
+    #     div[data-testid="stToolbar"] {
+    #         z-index: 100;
+    #     }
+    #     div[data-testid="stDecoration"] {
+    #         z-index: 100;
+    #     }
+    #     </style>
+    # """
+    # st.markdown(HIDE_ST_STYLE, unsafe_allow_html=True)
 
     # HACK This works when we've installed streamlit with pip/pipenv, so the
     # permissions during install are the same as the running process
@@ -95,13 +95,13 @@ def init_page():
     static_files_path = (streamlit_static_path / 'static_files')
     if not static_files_path.is_dir():
         static_files_path.mkdir()
-    # PythonのカレントディレクトリからStreamlitの実行環境にファイルをコピーする
-    shutil.copytree('static_files', static_files_path, dirs_exist_ok=True)
-    # FIXME!! 個別にコピーしたほうが軽いかも
-    # wildlife_video = static_files_path / "Wildlife.mp4"
-    # for f in os.listdir('static_files')
-    #     if not wildlife_video.exists():
-    #       　shutil.copy("Wildlife.mp4", wildlife_video)  # For newer Python.
+        # PythonのカレントディレクトリからStreamlitの実行環境にファイルをコピーする
+        shutil.copytree('static_files', static_files_path, dirs_exist_ok=True)
+        # FIXME!! 個別にコピーしたほうが軽いかも
+        # wildlife_video = static_files_path / "Wildlife.mp4"
+        # for f in os.listdir('static_files')
+        #     if not wildlife_video.exists():
+        #       　shutil.copy("Wildlife.mp4", wildlife_video)  # For newer Python.
 
 def autoplay_audio(file_path: str):
     with open(file_path, "rb") as f:
@@ -345,6 +345,8 @@ if __name__ == "__main__":
         col1.chat_message(msg["role"]).write(msg["content"])
 
     if prompt_text is not None or len(prompt_voice)>0: # 入力が空ではない場合 
+        print (prompt_text)
+
         prompt = ''
         if prompt_text is not None:
             prompt += prompt_text
@@ -358,7 +360,9 @@ if __name__ == "__main__":
 
         with col1.chat_message("assistant"):
             st_cb = StreamlitCallbackHandler(st.empty())
-            response = agent.invoke(prompt, callbacks=[st_cb])
+            with st.spinner("ChatGPT is typing ..."):
+                response = agent.invoke(prompt, callbacks=[st_cb])
+            # response = agent.invoke(prompt, callbacks=[st_cb])
             # response = st.session_state.agent.run(prompt, callbacks=[st_cb])
 
             # save agent memory to session state
@@ -384,7 +388,7 @@ if __name__ == "__main__":
         #     hide_index=True,
         #     )
 
-    col2.markdown("#### 建造物イメージ")
+    col2.markdown("#### ▼建造物デザイン")
     with col2:
         html_string = '''
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -545,10 +549,9 @@ if __name__ == "__main__":
             }
             </style>
         '''
-        components.html(html_string, height=320)
+        components.html(html_string, height=300)
 
-    col2.markdown("")
-    col2.markdown("#### 市街地表示")
+    col2.markdown("#### ▼建造物デザイン")
     with col2:
         html_string = '''
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -593,11 +596,11 @@ if __name__ == "__main__":
                 
                 // Initialize camera
                 // new THREE.PerspectiveCamera(視野角, アスペクト比, near, far)
-                const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 800)
+                const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 500)
                 
                 // Reposition camera
                 var obj_size = new THREE.Vector3();
-                camera.position.set(300, 150, -300);
+                camera.position.set(200, 120, -200);
                 camera.lookAt(0, 0, 0);
                 
                 // Initialize renderer
@@ -763,4 +766,4 @@ if __name__ == "__main__":
             }
             </style>
         '''
-        components.html(html_string, height=320)
+        components.html(html_string, height=300)
